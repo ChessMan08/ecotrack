@@ -40,6 +40,9 @@ export default function CalculatorPage() {
   const [gasM3, setGasM3] = useState(50);
   const [greenPct, setGreenPct] = useState(profile?.lifestyle.electricityGreenPercentage ?? 0);
   const [heatingType, setHeatingType] = useState(profile?.lifestyle.heatingType ?? "natural_gas");
+  
+  const householdSize = profile?.lifestyle.householdSize ?? 2;
+  const location = profile?.lifestyle.location ?? "US";
 
   // ── Transport inputs ────────────────────────────────────────────────────
   const [weeklyCarKm, setWeeklyCarKm] = useState(profile?.lifestyle.weeklyDrivingKm ?? 200);
