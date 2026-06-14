@@ -1,15 +1,15 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { getActions, addAction, updateAction } from "@/lib/firebase";
+import { getActions, addAction } from "@/lib/firebase";
 import { generateRecommendations } from "@/lib/recommendations";
 import { calculateFullFootprint, buildFootprintSummary } from "@/lib/calculator";
-import { nanoid } from "@/lib/utils";
+
 import ActionCard from "@/components/actions/ActionCard";
 import Button from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
-import type { Action, EmissionCategory, FootprintSummary } from "@/types";
+import type { Action, FootprintSummary } from "@/types";
 
 const FILTER_OPTIONS: { value: string; label: string }[] = [
   { value: "all", label: "All actions" },
@@ -28,6 +28,7 @@ export default function ActionsPage() {
   const [actions, setActions] = useState<Action[]>([]);
   const [summary, setSummary] = useState<FootprintSummary | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [filter, setFilter] = useState("all");
   const [generating, setGenerating] = useState(false);
 
@@ -48,11 +49,16 @@ export default function ActionsPage() {
       } else {
         setActions(saved as Action[]);
       }
+      setError(false);
+    } catch (err) {
+      console.error("Failed to load actions:", err);
+      setError(true);
     } finally {
       setLoading(false);
     }
   }, [user, profile]);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load(); }, [load]);
 
   async function regenerateSuggestions() {
@@ -69,16 +75,16 @@ export default function ActionsPage() {
     }
   }
 
-  const filteredActions = actions.filter((a) => {
+  const filteredActions = useMemo(() => actions.filter((a) => {
     if (filter === "all") return a.status !== "dismissed";
     if (["suggested", "planned", "done"].includes(filter)) return a.status === filter;
     return a.category === filter && a.status !== "dismissed";
-  });
+  }), [actions, filter]);
 
-  const doneCount = actions.filter((a) => a.status === "done").length;
-  const totalSavings = actions
+  const doneCount = useMemo(() => actions.filter((a) => a.status === "done").length, [actions]);
+  const totalSavings = useMemo(() => actions
     .filter((a) => a.status === "done")
-    .reduce((sum, a) => sum + a.estimatedKgCO2eSaved, 0);
+    .reduce((sum, a) => sum + a.estimatedKgCO2eSaved, 0), [actions]);
 
   return (
     <div className="page-container animate-fade-in">

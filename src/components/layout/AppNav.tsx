@@ -18,7 +18,7 @@ const NAV_ITEMS = [
 
 export default function AppNav() {
   const pathname = usePathname();
-  const { user, profile } = useAuth();
+  const { profile } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
 
   const handleSignOut = async () => {

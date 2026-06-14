@@ -6,7 +6,7 @@ import { DifficultyBadge, StatusBadge } from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
 import { updateAction, addAction } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
-import { formatKgCO2e } from "@/lib/calculator";
+import { formatKgCO2e, getCategoryColor, getCategoryIcon } from "@/lib/calculator";
 import type { Action } from "@/types";
 
 interface ActionCardProps {
@@ -44,7 +44,7 @@ export default function ActionCard({ action, compact = false, onUpdate }: Action
       <div className="flex items-start gap-3 rounded-xl border border-stone-100 p-3 dark:border-stone-800">
         <div
           className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-lg"
-          style={{ backgroundColor: `${getCategoryHex(action.category)}20` }}
+          style={{ backgroundColor: `${getCategoryColor(action.category)}20` }}
           aria-hidden
         >
           {getCategoryIcon(action.category)}
@@ -82,7 +82,7 @@ export default function ActionCard({ action, compact = false, onUpdate }: Action
       <div className="flex items-start gap-4">
         <div
           className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-xl"
-          style={{ backgroundColor: `${getCategoryHex(action.category)}20` }}
+          style={{ backgroundColor: `${getCategoryColor(action.category)}20` }}
           aria-hidden
         >
           {getCategoryIcon(action.category)}
@@ -161,24 +161,3 @@ export default function ActionCard({ action, compact = false, onUpdate }: Action
   );
 }
 
-function getCategoryIcon(category: string): string {
-  const map: Record<string, string> = {
-    home_energy: "🏠",
-    transportation: "🚗",
-    food: "🥗",
-    waste: "♻️",
-    purchases: "🛍️",
-  };
-  return map[category] ?? "⚡";
-}
-
-function getCategoryHex(category: string): string {
-  const map: Record<string, string> = {
-    home_energy: "#f97316",
-    transportation: "#3b82f6",
-    food: "#22c55e",
-    waste: "#a855f7",
-    purchases: "#ec4899",
-  };
-  return map[category] ?? "#3d8539";
-}

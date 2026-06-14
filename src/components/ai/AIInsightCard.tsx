@@ -16,6 +16,7 @@ export default function AIInsightCard({ summary, profile }: AIInsightCardProps) 
   const [error, setError] = useState(false);
 
   useEffect(() => {
+    const abortController = new AbortController();
     async function fetchInsight() {
       setLoading(true);
       setError(false);
@@ -24,17 +25,22 @@ export default function AIInsightCard({ summary, profile }: AIInsightCardProps) 
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ summary, profile }),
+          signal: abortController.signal,
         });
         const data = await res.json();
         setInsight(data.text || "");
-      } catch {
+      } catch (err: unknown) {
+        if (err instanceof Error && err.name === "AbortError") return;
         setError(true);
       } finally {
-        setLoading(false);
+        if (!abortController.signal.aborted) {
+          setLoading(false);
+        }
       }
     }
     fetchInsight();
-  }, [summary.totalKgCO2e]); // Only re-fetch when footprint changes
+    return () => abortController.abort();
+  }, [summary.totalKgCO2e, summary, profile]);
 
   return (
     <Card className="border-forest-100 bg-gradient-to-br from-forest-50 to-white dark:from-forest-950/30 dark:to-stone-900 dark:border-forest-800/30">
@@ -87,21 +93,29 @@ export function WeeklyFocusCard({
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const abortController = new AbortController();
     async function fetch_() {
       try {
         const res = await fetch("/api/ai/focus", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ summary, goals, recentActions: actions }),
+          signal: abortController.signal,
         });
         const data = await res.json();
         setFocus(data.text || "");
+      } catch (err: unknown) {
+        if (err instanceof Error && err.name === "AbortError") return;
+        // Ignore other errors for weekly focus (fail gracefully)
       } finally {
-        setLoading(false);
+        if (!abortController.signal.aborted) {
+          setLoading(false);
+        }
       }
     }
     fetch_();
-  }, []);
+    return () => abortController.abort();
+  }, [summary, goals, actions]);
 
   return (
     <Card className="bg-amber-50 border-amber-100 dark:bg-amber-950/20 dark:border-amber-800/30">

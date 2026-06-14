@@ -4,11 +4,11 @@ import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { getGoals, addGoal, updateGoal } from "@/lib/firebase";
 import { calculateFullFootprint, buildFootprintSummary, formatKgCO2e } from "@/lib/calculator";
-import { nanoid } from "@/lib/utils";
+
 import GoalProgressCard from "@/components/goals/GoalProgressCard";
 import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
-import { Input, Select, RadioGroup } from "@/components/ui/Input";
+import { Input, Select } from "@/components/ui/Input";
 import { Skeleton } from "@/components/ui/Skeleton";
 import type { Goal, EmissionCategory } from "@/types";
 
@@ -51,6 +51,7 @@ export default function GoalsPage() {
     setLoading(false);
   }, [user]);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { loadGoals(); }, [loadGoals]);
 
   function getCurrentKg(): number {

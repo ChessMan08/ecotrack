@@ -44,3 +44,7 @@ coverage/
 # TypeScript
 *.tsbuildinfo
 next-env.d.ts
+
+# Agent / AI artifacts
+skills-lock.json
+.agents/

@@ -11,7 +11,6 @@ import {
   calculatePurchases,
   toYearly,
   formatKgCO2e,
-  getCategoryColor,
 } from "@/lib/calculator";
 import { nanoid } from "@/lib/utils";
 import Card from "@/components/ui/Card";
@@ -41,8 +40,6 @@ export default function CalculatorPage() {
   const [gasM3, setGasM3] = useState(50);
   const [greenPct, setGreenPct] = useState(profile?.lifestyle.electricityGreenPercentage ?? 0);
   const [heatingType, setHeatingType] = useState(profile?.lifestyle.heatingType ?? "natural_gas");
-  const [householdSize, setHouseholdSize] = useState(profile?.lifestyle.householdSize ?? 2);
-  const [location, setLocation] = useState(profile?.lifestyle.location ?? "US");
 
   // ── Transport inputs ────────────────────────────────────────────────────
   const [weeklyCarKm, setWeeklyCarKm] = useState(profile?.lifestyle.weeklyDrivingKm ?? 200);

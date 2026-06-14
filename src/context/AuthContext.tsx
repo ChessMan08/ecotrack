@@ -5,6 +5,7 @@ import {
   useContext,
   useEffect,
   useState,
+  useCallback,
   type ReactNode,
 } from "react";
 import {
@@ -52,7 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  async function loadProfile(u: User) {
+  const loadProfile = useCallback(async (u: User) => {
     try {
       let data = await getUserProfile(u.uid);
       if (!data) {
@@ -79,7 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (err) {
       console.error("Failed to load profile:", err);
     }
-  }
+  }, []);
 
   async function refreshProfile() {
     if (!user) return;
@@ -97,7 +98,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
     });
     return unsub;
-  }, []);
+  }, [loadProfile]);
 
   return (
     <AuthContext.Provider value={{ user, profile, loading, refreshProfile }}>

@@ -21,7 +21,7 @@ import {
   WASTE_FACTORS,
   AVG_WEEKLY_WASTE_KG_PER_PERSON,
   PURCHASE_SPEND_FACTORS,
-  HEATING_FACTORS,
+  BENCHMARKS,
 } from "./emission-factors";
 
 import type {
@@ -450,7 +450,6 @@ export function buildFootprintSummary(
   result: FullFootprintResult,
   nationalAvgKgPerYear = 10000,
 ): FootprintSummary {
-  const { BENCHMARKS } = require("./emission-factors");
   const total = result.totalKgCO2eYearly;
   const categories: CategorySummary[] = (
     Object.entries(result.categories) as [EmissionCategory, number][]

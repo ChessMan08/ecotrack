@@ -20,7 +20,6 @@ import {
   addDoc,
   getDocs,
   query,
-  where,
   orderBy,
   limit,
   deleteDoc,

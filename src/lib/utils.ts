@@ -1,10 +1,11 @@
-import { type ClassValue, clsx } from "clsx";
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type ClassValue = any;
 
-// Simple clsx implementation without dependency
+// Lightweight classnames utility (no external dependency)
 export function cn(...inputs: ClassValue[]): string {
   return inputs
     .filter(Boolean)
-    .map((v) => (typeof v === "string" ? v : Object.entries(v as object).filter(([, val]) => Boolean(val)).map(([k]) => k).join(" ")))
+    .map((v) => (typeof v === "string" ? v : Object.entries(v as Record<string, boolean>).filter(([, val]) => Boolean(val)).map(([k]) => k).join(" ")))
     .join(" ");
 }
 

@@ -1,10 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  output: "export",
   reactStrictMode: true,
-  compress: true,
-  // Add empty turbopack config to suppress webpack migration warning
   turbopack: {},
   async headers() {
     return [

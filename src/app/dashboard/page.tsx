@@ -7,9 +7,6 @@ import {
   buildFootprintSummary,
   formatKgCO2e,
   getEmissionRating,
-  getCategoryColor,
-  getCategoryIcon,
-  getCategoryLabel,
 } from "@/lib/calculator";
 import { generateRecommendations } from "@/lib/recommendations";
 import { BENCHMARKS } from "@/lib/emission-factors";
@@ -52,6 +49,7 @@ export default function DashboardPage() {
   }, [user, profile]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadData();
   }, [loadData]);
 
@@ -64,7 +62,7 @@ export default function DashboardPage() {
   }
 
   const rating = getEmissionRating(summary.totalKgCO2e);
-  const topCategory = [...summary.categories].sort((a, b) => b.kgCO2e - a.kgCO2e)[0];
+  const topCategory = [...summary.categories].sort((a, b) => b.kgCO2e - a.kgCO2e)[0] ?? null;
   const activeGoals = goals.filter((g) => g.status === "active").slice(0, 2);
   const topActions = actions.filter((a) => a.status !== "dismissed").slice(0, 3);
 
@@ -172,12 +170,14 @@ export default function DashboardPage() {
                   />
                 ))}
             </div>
-            <div className="mt-4 rounded-xl bg-stone-50 p-3 dark:bg-stone-800">
-              <p className="text-xs text-stone-500 dark:text-stone-400">
-                Biggest category: <strong className="text-stone-700 dark:text-stone-300">{topCategory.label}</strong> at{" "}
-                {topCategory.percentage.toFixed(0)}% of your total.
-              </p>
-            </div>
+            {topCategory && (
+              <div className="mt-4 rounded-xl bg-stone-50 p-3 dark:bg-stone-800">
+                <p className="text-xs text-stone-500 dark:text-stone-400">
+                  Biggest category: <strong className="text-stone-700 dark:text-stone-300">{topCategory.label}</strong> at{" "}
+                  {topCategory.percentage.toFixed(0)}% of your total.
+                </p>
+              </div>
+            )}
           </Card>
 
           {/* Comparison */}

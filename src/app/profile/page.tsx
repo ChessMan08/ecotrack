@@ -8,7 +8,7 @@ import { COUNTRIES } from "@/lib/utils";
 import { nanoid } from "@/lib/utils";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
-import { Input, Select, RadioGroup, Slider } from "@/components/ui/Input";
+import { Select, RadioGroup, Slider } from "@/components/ui/Input";
 import type { LifestyleProfile, ChatMessage } from "@/types";
 
 export default function ProfilePage() {
@@ -416,7 +416,7 @@ function AIChatPanel({ profile }: { profile: LifestyleProfile }) {
 // ── Export Panel ──────────────────────────────────────────────────────────────
 
 function ExportPanel() {
-  const { user, profile } = useAuth();
+  const { profile } = useAuth();
   const [exporting, setExporting] = useState(false);
 
   async function exportCSV() {
@@ -531,7 +531,7 @@ function ExportPanel() {
       <Card className="border-dashed border-stone-300 dark:border-stone-700">
         <div className="text-center py-2">
           <p className="text-2xl mb-2">🔗</p>
-          <p className="text-sm font-medium text-stone-700 dark:text-stone-300">Shareable summary</p>
+          <p className="text-sm font-medium text-stone-900 dark:text-stone-100">{profile?.displayName}</p>
           <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">
             Coming soon — share a card showing your footprint and actions.
           </p>
