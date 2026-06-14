@@ -1,0 +1,71 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helper functions ──────────────────────────────────────────────────
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return request.auth.uid == uid;
+    }
+
+    function isValidEmissionEntry(data) {
+      return data.keys().hasAll(['category', 'kgCO2e', 'date', 'uid'])
+        && data.kgCO2e is number
+        && data.kgCO2e >= 0
+        && data.kgCO2e <= 1000000  // Sanity cap: 1,000 t CO2e max per entry
+        && data.category in ['home_energy', 'transportation', 'food', 'waste', 'purchases'];
+    }
+
+    // ── Users collection ──────────────────────────────────────────────────
+    match /users/{uid} {
+      // Users can only read and write their own profile
+      allow read: if isAuthenticated() && isOwner(uid);
+      allow create: if isAuthenticated() && isOwner(uid);
+      allow update: if isAuthenticated() && isOwner(uid);
+      allow delete: if false; // Profiles are not deleteable via client
+
+      // ── Emissions sub-collection ────────────────────────────────────────
+      match /emissions/{entryId} {
+        allow read: if isAuthenticated() && isOwner(uid);
+        allow create: if isAuthenticated() && isOwner(uid)
+          && isValidEmissionEntry(request.resource.data);
+        allow update: if isAuthenticated() && isOwner(uid);
+        allow delete: if isAuthenticated() && isOwner(uid);
+      }
+
+      // ── Goals sub-collection ────────────────────────────────────────────
+      match /goals/{goalId} {
+        allow read: if isAuthenticated() && isOwner(uid);
+        allow create: if isAuthenticated() && isOwner(uid)
+          && request.resource.data.uid == uid;
+        allow update: if isAuthenticated() && isOwner(uid);
+        allow delete: if isAuthenticated() && isOwner(uid);
+      }
+
+      // ── Actions sub-collection ──────────────────────────────────────────
+      match /actions/{actionId} {
+        allow read: if isAuthenticated() && isOwner(uid);
+        allow create: if isAuthenticated() && isOwner(uid);
+        allow update: if isAuthenticated() && isOwner(uid);
+        allow delete: if isAuthenticated() && isOwner(uid);
+      }
+
+      // ── AI Insights sub-collection ──────────────────────────────────────
+      match /insights/{insightId} {
+        allow read: if isAuthenticated() && isOwner(uid);
+        allow create: if isAuthenticated() && isOwner(uid);
+        allow update: if isAuthenticated() && isOwner(uid);
+        allow delete: if isAuthenticated() && isOwner(uid);
+      }
+    }
+
+    // ── Deny all other access ─────────────────────────────────────────────
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

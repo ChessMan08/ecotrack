@@ -1,0 +1,116 @@
+import type { Config } from "tailwindcss";
+
+const config: Config = {
+  content: [
+    "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
+  ],
+  darkMode: "class",
+  theme: {
+    extend: {
+      colors: {
+        // Forest + earth palette - distinctive for climate-tech
+        forest: {
+          50: "#f0f7f0",
+          100: "#dceddb",
+          200: "#bbdbb9",
+          300: "#8ec28b",
+          400: "#5fa35b",
+          500: "#3d8539",
+          600: "#2d6a2a",
+          700: "#255422",
+          800: "#20431d",
+          900: "#1a3819",
+          950: "#0d1f0c",
+        },
+        earth: {
+          50: "#faf7f2",
+          100: "#f2ebe0",
+          200: "#e4d4be",
+          300: "#d2b896",
+          400: "#be9870",
+          500: "#ae7f55",
+          600: "#9a6a47",
+          700: "#7f553c",
+          800: "#674538",
+          900: "#563a30",
+          950: "#2e1e18",
+        },
+        moss: {
+          50: "#f5f7f0",
+          100: "#e8eddc",
+          200: "#d2dcbb",
+          300: "#b4c590",
+          400: "#95ad66",
+          500: "#7a9548",
+          600: "#607737",
+          700: "#4c5e2d",
+          800: "#3e4c27",
+          900: "#354024",
+          950: "#1a2111",
+        },
+        sky: {
+          50: "#f0f9ff",
+          100: "#e0f2fe",
+          200: "#b9e6fe",
+          300: "#7cd4fd",
+          400: "#36bffa",
+          500: "#0ca5e9",
+          600: "#0284c7",
+          700: "#0369a1",
+          800: "#075985",
+          900: "#0c4a6e",
+        },
+        stone: {
+          50: "#fafaf9",
+          100: "#f5f5f4",
+          200: "#e7e5e4",
+          300: "#d6d3d1",
+          400: "#a8a29e",
+          500: "#78716c",
+          600: "#57534e",
+          700: "#44403c",
+          800: "#292524",
+          900: "#1c1917",
+          950: "#0c0a09",
+        },
+      },
+      fontFamily: {
+        sans: ["var(--font-inter)", "system-ui", "sans-serif"],
+        display: ["var(--font-cabinet)", "var(--font-inter)", "sans-serif"],
+        mono: ["var(--font-mono)", "monospace"],
+      },
+      backgroundImage: {
+        "gradient-radial": "radial-gradient(var(--tw-gradient-stops))",
+        "gradient-conic": "conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))",
+        "leaf-pattern": "url('/leaf-pattern.svg')",
+      },
+      animation: {
+        "fade-in": "fadeIn 0.3s ease-in-out",
+        "slide-up": "slideUp 0.3s ease-out",
+        "pulse-slow": "pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+        "count-up": "countUp 1s ease-out forwards",
+        "spin-slow": "spin 3s linear infinite",
+      },
+      keyframes: {
+        fadeIn: { "0%": { opacity: "0" }, "100%": { opacity: "1" } },
+        slideUp: { "0%": { transform: "translateY(12px)", opacity: "0" }, "100%": { transform: "translateY(0)", opacity: "1" } },
+        countUp: { "0%": { opacity: "0", transform: "translateY(8px)" }, "100%": { opacity: "1", transform: "translateY(0)" } },
+      },
+      borderRadius: {
+        "4xl": "2rem",
+        "5xl": "2.5rem",
+      },
+      boxShadow: {
+        "card": "0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)",
+        "card-hover": "0 4px 12px 0 rgb(0 0 0 / 0.12), 0 2px 4px -1px rgb(0 0 0 / 0.08)",
+        "glow-green": "0 0 20px 0 rgb(61 133 57 / 0.3)",
+        "glow-earth": "0 0 20px 0 rgb(174 127 85 / 0.3)",
+      },
+    },
+  },
+  plugins: [],
+};
+
+export default config;
