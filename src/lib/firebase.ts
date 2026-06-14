@@ -120,7 +120,7 @@ export async function getEmissionEntries(uid: string, limitCount = 50) {
   const col = collection(db, "users", uid, "emissions");
   const q = query(col, orderBy("date", "desc"), limit(limitCount));
   const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ id: d.id, ...normalizeTimestamps(d.data()) }));
+  return snap.docs.map((d) => ({ ...normalizeTimestamps(d.data()), id: d.id }));
 }
 
 export async function deleteEmissionEntry(uid: string, entryId: string) {
@@ -139,7 +139,7 @@ export async function getGoals(uid: string) {
   const col = collection(db, "users", uid, "goals");
   const q = query(col, orderBy("createdAt", "desc"));
   const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ id: d.id, ...normalizeTimestamps(d.data()) }));
+  return snap.docs.map((d) => ({ ...normalizeTimestamps(d.data()), id: d.id }));
 }
 
 export async function updateGoal(uid: string, goalId: string, data: object) {
@@ -158,7 +158,7 @@ export async function getActions(uid: string) {
   const col = collection(db, "users", uid, "actions");
   const q = query(col, orderBy("createdAt", "desc"));
   const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ id: d.id, ...normalizeTimestamps(d.data()) }));
+  return snap.docs.map((d) => ({ ...normalizeTimestamps(d.data()), id: d.id }));
 }
 
 export async function updateAction(uid: string, actionId: string, data: object) {
@@ -179,5 +179,5 @@ export async function getLatestInsight(uid: string) {
   const snap = await getDocs(q);
   if (snap.empty) return null;
   const d = snap.docs[0];
-  return { id: d.id, ...normalizeTimestamps(d.data()) };
+  return { ...normalizeTimestamps(d.data()), id: d.id };
 }
