@@ -70,6 +70,7 @@ describe("Actions Page Pipeline", () => {
       electricityGreenPercentage: 0,
       homeSizeM2: 50,
       vehicleType: "none",
+      weeklyDrivingKm: 0,
       flightFrequency: "none",
       dietType: "vegan",
       localFoodPercentage: 0,

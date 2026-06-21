@@ -6,6 +6,7 @@ import {
   useEffect,
   useState,
   useCallback,
+  useMemo,
   type ReactNode,
 } from "react";
 import {
@@ -15,11 +16,13 @@ import {
   createUserProfile,
   type User,
 } from "@/lib/firebase";
-import type { UserProfile, LifestyleProfile } from "@/types";
+import { calculateFullFootprint, buildFootprintSummary } from "@/lib/calculator";
+import type { UserProfile, LifestyleProfile, FootprintSummary } from "@/types";
 
 interface AuthContextValue {
   user: User | null;
   profile: UserProfile | null;
+  summary: FootprintSummary | null;
   loading: boolean;
   error: string | null;
   refreshProfile: () => Promise<void>;
@@ -45,6 +48,7 @@ const defaultLifestyle: LifestyleProfile = {
 const AuthContext = createContext<AuthContextValue>({
   user: null,
   profile: null,
+  summary: null,
   loading: true,
   error: null,
   refreshProfile: async () => {},
@@ -145,8 +149,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [loadProfile]);
 
+  const summary = useMemo(() => {
+    if (!profile) return null;
+    return buildFootprintSummary(calculateFullFootprint(profile.lifestyle));
+  }, [profile]);
+
   return (
-    <AuthContext.Provider value={{ user, profile, loading, error, refreshProfile }}>
+    <AuthContext.Provider value={{ user, profile, summary, loading, error, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );

@@ -4,12 +4,11 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { getActions, addAction } from "@/lib/firebase";
 import { generateRecommendations } from "@/lib/recommendations";
-import { calculateFullFootprint, buildFootprintSummary } from "@/lib/calculator";
 
 import ActionCard from "@/components/actions/ActionCard";
 import Button from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
-import type { Action, FootprintSummary } from "@/types";
+import type { Action } from "@/types";
 
 /** Maximum time (ms) to wait for data before forcing render */
 const LOAD_TIMEOUT_MS = 15_000;
@@ -27,16 +26,15 @@ const FILTER_OPTIONS: { value: string; label: string }[] = [
 ];
 
 export default function ActionsPage() {
-  const { user, profile } = useAuth();
+  const { user, profile, summary } = useAuth();
   const [actions, setActions] = useState<Action[]>([]);
-  const [summary, setSummary] = useState<FootprintSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [dataError, setDataError] = useState<string | null>(null);
   const [filter, setFilter] = useState("all");
   const [generating, setGenerating] = useState(false);
 
   const load = useCallback(async () => {
-    if (!user || !profile) {
+    if (!user || !profile || !summary) {
       setLoading(false);
       return;
     }
@@ -51,17 +49,12 @@ export default function ActionsPage() {
     }, LOAD_TIMEOUT_MS);
 
     try {
-      // Synchronous calculation — always succeeds
-      const result = calculateFullFootprint(profile.lifestyle);
-      const s = buildFootprintSummary(result);
-      setSummary(s);
-
       // Firestore fetch — may fail for new users
       try {
         const saved = await getActions(user.uid);
         if (saved.length === 0) {
           // Generate and show initial suggestions locally (don't write to Firestore yet)
-          const suggested = generateRecommendations(profile.lifestyle, s, user.uid, 8);
+          const suggested = generateRecommendations(profile.lifestyle, summary, user.uid, 8);
           const withStatus = suggested.map((a) => ({ ...a, status: "suggested" as const }));
           setActions(withStatus);
         } else {
@@ -70,7 +63,7 @@ export default function ActionsPage() {
       } catch (firestoreErr) {
         console.error("Failed to fetch actions:", firestoreErr);
         // Fall back to locally-generated suggestions
-        const suggested = generateRecommendations(profile.lifestyle, s, user.uid, 8);
+        const suggested = generateRecommendations(profile.lifestyle, summary, user.uid, 8);
         const withStatus = suggested.map((a) => ({ ...a, status: "suggested" as const }));
         setActions(withStatus);
         setDataError("Couldn't load saved actions. Showing personalized suggestions.");
@@ -82,7 +75,7 @@ export default function ActionsPage() {
       clearTimeout(timeout);
       setLoading(false);
     }
-  }, [user, profile]);
+  }, [user, profile, summary]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect

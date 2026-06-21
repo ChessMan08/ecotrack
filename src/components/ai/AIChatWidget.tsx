@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { calculateFullFootprint, buildFootprintSummary } from "@/lib/calculator";
 import { nanoid } from "@/lib/utils";
 import type { ChatMessage } from "@/types";
 
@@ -13,7 +12,7 @@ const CHAT_TIMEOUT_MS = 20_000;
 const MAX_HISTORY_TURNS = 10;
 
 export default function AIChatWidget() {
-  const { profile } = useAuth();
+  const { profile, summary } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -22,12 +21,7 @@ export default function AIChatWidget() {
   const inputRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
 
-  // Compute summary when profile is available
-  const summary = useMemo(() => {
-    if (!profile) return null;
-    const result = calculateFullFootprint(profile.lifestyle);
-    return buildFootprintSummary(result);
-  }, [profile]);
+
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {

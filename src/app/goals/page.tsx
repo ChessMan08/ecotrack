@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { getGoals, addGoal, updateGoal } from "@/lib/firebase";
-import { calculateFullFootprint, buildFootprintSummary, formatKgCO2e } from "@/lib/calculator";
+import { formatKgCO2e } from "@/lib/calculator";
 
 import GoalProgressCard from "@/components/goals/GoalProgressCard";
 import Button from "@/components/ui/Button";
@@ -29,7 +29,7 @@ const PRESET_REDUCTIONS = [
 ];
 
 export default function GoalsPage() {
-  const { user, profile } = useAuth();
+  const { user, profile, summary } = useAuth();
   const [goals, setGoals] = useState<Goal[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -55,9 +55,7 @@ export default function GoalsPage() {
   useEffect(() => { loadGoals(); }, [loadGoals]);
 
   function getCurrentKg(): number {
-    if (!profile) return 0;
-    const result = calculateFullFootprint(profile.lifestyle);
-    const summary = buildFootprintSummary(result);
+    if (!profile || !summary) return 0;
     if (category === "overall") return summary.totalKgCO2e;
     const cat = summary.categories.find((c) => c.category === category);
     return cat?.kgCO2e ?? summary.totalKgCO2e;
@@ -143,7 +141,7 @@ export default function GoalsPage() {
               <Select
                 label="Tracking period"
                 value={period}
-                onChange={(e) => setPeriod(e.target.value as never)}
+                onChange={(e) => setPeriod(e.target.value as "weekly" | "monthly" | "yearly")}
                 options={[
                   { value: "weekly", label: "Weekly" },
                   { value: "monthly", label: "Monthly" },

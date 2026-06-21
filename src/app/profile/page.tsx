@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { updateUserProfile } from "@/lib/firebase";
-import { calculateFullFootprint, buildFootprintSummary, formatKgCO2e } from "@/lib/calculator";
+import { formatKgCO2e } from "@/lib/calculator";
 import { COUNTRIES } from "@/lib/utils";
 import { nanoid } from "@/lib/utils";
 import Card from "@/components/ui/Card";
@@ -55,7 +55,7 @@ export default function ProfilePage() {
         ].map((tab) => (
           <button
             key={tab.id}
-            onClick={() => setActiveTab(tab.id as never)}
+            onClick={() => setActiveTab(tab.id as "profile" | "chat" | "export")}
             className={`flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
               activeTab === tab.id
                 ? "bg-forest-600 text-white"
@@ -271,10 +271,7 @@ function AIChatPanel({ profile }: { profile: LifestyleProfile }) {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const summary = useMemo(() => {
-    const result = calculateFullFootprint(profile);
-    return buildFootprintSummary(result);
-  }, [profile]);
+  const { summary } = useAuth();
 
   async function sendMessage() {
     const text = input.trim();
@@ -418,13 +415,11 @@ function AIChatPanel({ profile }: { profile: LifestyleProfile }) {
 // ── Export Panel ──────────────────────────────────────────────────────────────
 
 function ExportPanel() {
-  const { profile } = useAuth();
+  const { profile, summary } = useAuth();
   const [exporting, setExporting] = useState(false);
 
   async function exportCSV() {
-    if (!profile) return;
-    const result = calculateFullFootprint(profile.lifestyle);
-    const summary = buildFootprintSummary(result);
+    if (!profile || !summary) return;
 
     const rows = [
       ["Category", "kg CO2e/year", "% of total", "Source"],
@@ -448,11 +443,9 @@ function ExportPanel() {
   }
 
   async function exportReport() {
-    if (!profile) return;
+    if (!profile || !summary) return;
     setExporting(true);
     try {
-      const result = calculateFullFootprint(profile.lifestyle);
-      const summary = buildFootprintSummary(result);
 
       // Build a simple HTML report for printing
       const html = `<!DOCTYPE html>

@@ -17,7 +17,7 @@ import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import { Input, Select, RadioGroup, Slider } from "@/components/ui/Input";
 import { CategoryPieChart } from "@/components/charts/FootprintChart";
-import type { FootprintSummary } from "@/types";
+import type { FootprintSummary, LifestyleProfile } from "@/types";
 
 type Category = "home" | "transport" | "food" | "waste" | "purchases";
 
@@ -39,20 +39,20 @@ export default function CalculatorPage() {
   const [elecKwh, setElecKwh] = useState(350);
   const [gasM3, setGasM3] = useState(50);
   const [greenPct, setGreenPct] = useState(profile?.lifestyle.electricityGreenPercentage ?? 0);
-  const [heatingType, setHeatingType] = useState(profile?.lifestyle.heatingType ?? "natural_gas");
+  const [heatingType, setHeatingType] = useState<LifestyleProfile["heatingType"]>(profile?.lifestyle.heatingType ?? "natural_gas");
   
   const householdSize = profile?.lifestyle.householdSize ?? 2;
   const location = profile?.lifestyle.location ?? "US";
 
   // ── Transport inputs ────────────────────────────────────────────────────
   const [weeklyCarKm, setWeeklyCarKm] = useState(profile?.lifestyle.weeklyDrivingKm ?? 200);
-  const [vehicleType, setVehicleType] = useState(profile?.lifestyle.vehicleType ?? "petrol");
+  const [vehicleType, setVehicleType] = useState<LifestyleProfile["vehicleType"]>(profile?.lifestyle.vehicleType ?? "petrol");
   const [weeklyPtKm, setWeeklyPtKm] = useState(30);
   const [shortFlights, setShortFlights] = useState(1);
   const [longFlights, setLongFlights] = useState(0);
 
   // ── Food inputs ─────────────────────────────────────────────────────────
-  const [dietType, setDietType] = useState(profile?.lifestyle.dietType ?? "omnivore");
+  const [dietType, setDietType] = useState<LifestyleProfile["dietType"]>(profile?.lifestyle.dietType ?? "omnivore");
   const [localPct, setLocalPct] = useState(profile?.lifestyle.localFoodPercentage ?? 20);
   const [wastePct, setWastePct] = useState(20);
 
@@ -70,7 +70,7 @@ export default function CalculatorPage() {
   const homeResult = calculateHomeEnergy({
     monthlyElectricityKwh: elecKwh,
     monthlyGasM3: gasM3,
-    heatingType: heatingType as never,
+    heatingType,
     greenEnergyPercent: greenPct,
     householdSize,
     location,
@@ -78,7 +78,7 @@ export default function CalculatorPage() {
 
   const transportResult = calculateTransport({
     weeklyCarKm,
-    vehicleType: vehicleType as never,
+    vehicleType,
     weeklyPublicTransportKm: weeklyPtKm,
     weeklyFlightsShortHaul: shortFlights,
     weeklyFlightsLongHaul: longFlights,
@@ -86,7 +86,7 @@ export default function CalculatorPage() {
   });
 
   const foodResult = calculateFood({
-    dietType: dietType as never,
+    dietType,
     householdSize,
     localFoodPercent: localPct,
     foodWastePercent: wastePct,
