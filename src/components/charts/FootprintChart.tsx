@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import {
   AreaChart,
   Area,
@@ -17,9 +18,9 @@ import type { FootprintSummary } from "@/types";
 import { formatKgCO2e } from "@/lib/calculator";
 
 // Simulate monthly data by distributing yearly total across months
-function buildMonthlyData(summary: FootprintSummary) {
+function buildMonthlyData(totalKgCO2e: number) {
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  const base = summary.totalKgCO2e / 12;
+  const base = totalKgCO2e / 12;
   // Add slight seasonal variation for realism
   const seasonalFactors = [1.15, 1.1, 1.05, 0.95, 0.9, 0.85, 0.85, 0.9, 0.95, 1.0, 1.1, 1.2];
   const avg = seasonalFactors.reduce((a, b) => a + b, 0) / seasonalFactors.length;
@@ -34,7 +35,7 @@ interface FootprintChartProps {
 }
 
 export default function FootprintChart({ summary }: FootprintChartProps) {
-  const data = buildMonthlyData(summary);
+  const data = useMemo(() => buildMonthlyData(summary.totalKgCO2e), [summary.totalKgCO2e]);
 
   return (
     <ResponsiveContainer width="100%" height={200}>
@@ -66,7 +67,7 @@ export default function FootprintChart({ summary }: FootprintChartProps) {
             fontSize: "12px",
           }}
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          formatter={(value: any) => [`${formatKgCO2e(Number(value))}`, "CO₂e"]}
+          formatter={(value: any) => [`${formatKgCO2e(Number(value) || 0)}`, "CO₂e"]}
         />
         <Area
           type="monotone"
@@ -87,11 +88,15 @@ interface CategoryPieChartProps {
 }
 
 export function CategoryPieChart({ summary }: CategoryPieChartProps) {
-  const data = summary.categories.map((c) => ({
-    name: c.label,
-    value: Math.round(c.kgCO2e),
-    color: c.color,
-  }));
+  const data = useMemo(
+    () =>
+      summary.categories.map((c) => ({
+        name: c.label,
+        value: Math.round(c.kgCO2e),
+        color: c.color,
+      })),
+    [summary.categories],
+  );
 
   return (
     <ResponsiveContainer width="100%" height={300}>
@@ -113,7 +118,7 @@ export function CategoryPieChart({ summary }: CategoryPieChartProps) {
         <Tooltip
           contentStyle={{ borderRadius: "12px", fontSize: "12px" }}
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          formatter={(value: any) => [`${formatKgCO2e(Number(value))}`, "CO₂e/yr"]}
+          formatter={(value: any) => [`${formatKgCO2e(Number(value) || 0)}`, "CO₂e/yr"]}
         />
         <Legend
           iconType="circle"

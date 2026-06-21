@@ -17,33 +17,62 @@ import { DashboardSkeleton } from "@/components/ui/Skeleton";
 import Button from "@/components/ui/Button";
 import FootprintChart from "@/components/charts/FootprintChart";
 import AIInsightCard from "@/components/ai/AIInsightCard";
+import AIReductionTips from "@/components/ai/AIReductionTips";
 import ActionCard from "@/components/actions/ActionCard";
 import GoalProgressCard from "@/components/goals/GoalProgressCard";
 import Link from "next/link";
 import type { FootprintSummary, Action, Goal } from "@/types";
 
+/** Maximum time (ms) to wait for data before forcing render */
+const LOAD_TIMEOUT_MS = 15_000;
+
 export default function DashboardPage() {
-  const { user, profile } = useAuth();
+  const { user, profile, error: authError } = useAuth();
   const [summary, setSummary] = useState<FootprintSummary | null>(null);
   const [actions, setActions] = useState<Action[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
   const [loading, setLoading] = useState(true);
+  const [dataError, setDataError] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
-    if (!user || !profile) return;
+    if (!user || !profile) {
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
+    setDataError(null);
+
+    // Safety timeout — force render even if Firestore is slow
+    const timeout = setTimeout(() => {
+      setLoading(false);
+      setDataError("Data is taking longer than expected. Showing what we have.");
+    }, LOAD_TIMEOUT_MS);
+
     try {
+      // Footprint calculation is synchronous and fast — always succeeds
       const result = calculateFullFootprint(profile.lifestyle);
       const s = buildFootprintSummary(result);
       setSummary(s);
 
-      const [fetchedActions, fetchedGoals] = await Promise.all([
-        getActions(user.uid),
-        getGoals(user.uid),
-      ]);
-      setActions(fetchedActions as Action[]);
-      setGoals(fetchedGoals as Goal[]);
+      // Firestore fetches may fail for new users or on slow networks
+      try {
+        const [fetchedActions, fetchedGoals] = await Promise.all([
+          getActions(user.uid),
+          getGoals(user.uid),
+        ]);
+        setActions(fetchedActions as Action[]);
+        setGoals(fetchedGoals as Goal[]);
+      } catch (firestoreErr) {
+        console.error("Failed to fetch Firestore data:", firestoreErr);
+        setDataError("Some data couldn't be loaded. Core footprint calculations are still accurate.");
+        // Keep empty arrays — pages render with empty state
+      }
+    } catch (err) {
+      console.error("Dashboard calculation error:", err);
+      setDataError("Failed to calculate footprint. Please try refreshing.");
     } finally {
+      clearTimeout(timeout);
       setLoading(false);
     }
   }, [user, profile]);
@@ -53,7 +82,8 @@ export default function DashboardPage() {
     loadData();
   }, [loadData]);
 
-  if (loading || !summary || !profile) {
+  // Early return: still waiting for auth to resolve
+  if (loading && !summary) {
     return (
       <div className="page-container">
         <DashboardSkeleton />
@@ -61,24 +91,55 @@ export default function DashboardPage() {
     );
   }
 
-  const rating = getEmissionRating(summary.totalKgCO2e);
-  const topCategory = [...summary.categories].sort((a, b) => b.kgCO2e - a.kgCO2e)[0] ?? null;
+  // Auth resolved but no profile — show setup prompt
+  if (!profile) {
+    return (
+      <div className="page-container animate-fade-in">
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+          <div className="text-5xl mb-4">🌱</div>
+          <h1 className="text-xl font-bold text-stone-900 dark:text-stone-100 mb-2">
+            Welcome to Ecotrack
+          </h1>
+          <p className="text-sm text-stone-500 dark:text-stone-400 mb-6 max-w-md">
+            Complete your profile to see your personalized carbon footprint dashboard.
+          </p>
+          <Link href="/profile">
+            <Button>Set up your profile</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  // Compute summary from profile if Firestore load failed before calculation
+  // Compute summary from profile if Firestore load failed before calculation
+  const safeSummary = summary ?? buildFootprintSummary(calculateFullFootprint(profile.lifestyle));
+  const rating = getEmissionRating(safeSummary.totalKgCO2e);
+  const sortedCategories = [...safeSummary.categories].sort((a, b) => b.kgCO2e - a.kgCO2e);
+  const topCategory = sortedCategories[0] ?? null;
   const activeGoals = goals.filter((g) => g.status === "active").slice(0, 2);
   const topActions = actions.filter((a) => a.status !== "dismissed").slice(0, 3);
 
-  // If no saved actions, generate suggestions
+  // If no saved actions, generate local suggestions
   const suggestedActions =
     topActions.length > 0
       ? topActions
-      : generateRecommendations(profile.lifestyle, summary, user!.uid, 3).map((a) => ({
+      : generateRecommendations(profile.lifestyle, safeSummary, user?.uid ?? "", 3).map((a) => ({
           ...a,
           status: "suggested" as const,
         }));
 
-  const vs1pt5Target = summary.totalKgCO2e - BENCHMARKS.targetKgCO2ePerYear;
+  const vs1pt5Target = safeSummary.totalKgCO2e - BENCHMARKS.targetKgCO2ePerYear;
 
   return (
     <div className="page-container animate-fade-in">
+      {/* Error banner */}
+      {(dataError || authError) && (
+        <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
+          ⚠️ {dataError || authError}
+        </div>
+      )}
+
       {/* ── Header ── */}
       <div className="mb-8 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
         <div>
@@ -99,9 +160,9 @@ export default function DashboardPage() {
         <Card className="col-span-2 bg-gradient-to-br from-forest-600 to-forest-700 text-white border-0">
           <p className="text-sm text-forest-200">Annual footprint</p>
           <p className="mt-1 text-4xl font-extrabold tracking-tight">
-            {summary.totalKgCO2e >= 1000
-              ? `${(summary.totalKgCO2e / 1000).toFixed(1)}t`
-              : `${summary.totalKgCO2e.toFixed(0)} kg`}
+            {safeSummary.totalKgCO2e >= 1000
+              ? `${(safeSummary.totalKgCO2e / 1000).toFixed(1)}t`
+              : `${safeSummary.totalKgCO2e.toFixed(0)} kg`}
           </p>
           <p className="mt-1 text-sm text-forest-200">CO₂e per year</p>
           <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1 text-xs font-semibold">
@@ -116,12 +177,12 @@ export default function DashboardPage() {
         <StatCard
           label="vs Global average"
           value={
-            summary.vsGlobalAverage > 0
-              ? `+${summary.vsGlobalAverage.toFixed(0)}%`
-              : `${summary.vsGlobalAverage.toFixed(0)}%`
+            safeSummary.vsGlobalAverage > 0
+              ? `+${safeSummary.vsGlobalAverage.toFixed(0)}%`
+              : `${safeSummary.vsGlobalAverage.toFixed(0)}%`
           }
           icon="🌍"
-          color={summary.vsGlobalAverage > 0 ? "#ef4444" : "#22c55e"}
+          color={safeSummary.vsGlobalAverage > 0 ? "#ef4444" : "#22c55e"}
         />
 
         <StatCard
@@ -148,7 +209,7 @@ export default function DashboardPage() {
               </h2>
               <span className="text-xs text-stone-400">Based on current profile</span>
             </div>
-            <FootprintChart summary={summary} />
+            <FootprintChart summary={safeSummary} />
           </Card>
 
           {/* Category breakdown */}
@@ -157,18 +218,16 @@ export default function DashboardPage() {
               Breakdown by category
             </h2>
             <div className="space-y-4">
-              {[...summary.categories]
-                .sort((a, b) => b.kgCO2e - a.kgCO2e)
-                .map((cat) => (
-                  <CategoryBar
-                    key={cat.category}
-                    label={cat.label}
-                    icon={cat.icon}
-                    value={cat.kgCO2e}
-                    total={summary.totalKgCO2e}
-                    color={cat.color}
-                  />
-                ))}
+              {sortedCategories.map((cat) => (
+                <CategoryBar
+                  key={cat.category}
+                  label={cat.label}
+                  icon={cat.icon}
+                  value={cat.kgCO2e}
+                  total={safeSummary.totalKgCO2e}
+                  color={cat.color}
+                />
+              ))}
             </div>
             {topCategory && (
               <div className="mt-4 rounded-xl bg-stone-50 p-3 dark:bg-stone-800">
@@ -187,7 +246,7 @@ export default function DashboardPage() {
             </h2>
             <div className="space-y-3">
               {[
-                { label: "You", value: summary.totalKgCO2e, color: "#3d8539" },
+                { label: "You", value: safeSummary.totalKgCO2e, color: "#3d8539" },
                 { label: "Global avg", value: BENCHMARKS.globalAvgKgCO2ePerYear, color: "#94a3b8" },
                 { label: "US avg", value: BENCHMARKS.usAvgKgCO2ePerYear, color: "#94a3b8" },
                 { label: "1.5°C target", value: BENCHMARKS.targetKgCO2ePerYear, color: "#22c55e" },
@@ -220,7 +279,16 @@ export default function DashboardPage() {
         {/* Right column — AI, actions, goals */}
         <div className="lg:col-span-2 space-y-5">
           {/* AI Insight */}
-          <AIInsightCard summary={summary} profile={profile.lifestyle} />
+          <AIInsightCard summary={safeSummary} profile={profile.lifestyle} />
+
+          {/* AI Reduction Tips */}
+          {topCategory && (
+            <AIReductionTips
+              summary={safeSummary}
+              topCategory={topCategory.category}
+              existingActions={actions}
+            />
+          )}
 
           {/* Goals */}
           {activeGoals.length > 0 && (

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { buildFootprintSummaryPrompt } from "@/lib/gemini";
+import { generateLocalSummary } from "@/lib/local-insights";
+import { callGemini } from "@/lib/gemini-client";
 import type { FootprintSummary, LifestyleProfile } from "@/types";
 
 export async function POST(req: NextRequest) {
@@ -13,54 +15,27 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing summary or profile" }, { status: 400 });
     }
 
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json(
-        { text: "AI insights unavailable — Gemini API key not configured." },
-        { status: 200 },
-      );
-    }
-
+    // Try Gemini first
     const prompt = buildFootprintSummaryPrompt(summary, profile);
+    const aiText = await callGemini({
+      prompt,
+      temperature: 0.7,
+      maxOutputTokens: 300,
+      topP: 0.8,
+    });
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: {
-            temperature: 0.7,
-            maxOutputTokens: 300,
-            topP: 0.8,
-          },
-          safetySettings: [
-            { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
-            { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
-          ],
-        }),
-      },
-    );
-
-    if (!response.ok) {
-      const err = await response.text();
-      console.error("Gemini API error:", err);
-      return NextResponse.json(
-        { text: "AI insights temporarily unavailable. Your footprint data is accurate." },
-        { status: 200 },
-      );
+    if (aiText) {
+      return NextResponse.json({ text: aiText, fromAI: true });
     }
 
-    const data = await response.json();
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
-
-    return NextResponse.json({ text });
+    // Fallback to deterministic local summary
+    const localText = generateLocalSummary(summary, profile);
+    return NextResponse.json({ text: localText, fromAI: false });
   } catch (err) {
     console.error("Summary route error:", err);
-    return NextResponse.json(
-      { text: "AI summary temporarily unavailable." },
-      { status: 200 },
-    );
+    return NextResponse.json({
+      text: "Your footprint data is ready — personalized AI insights will appear when the service is available.",
+      fromAI: false,
+    });
   }
 }

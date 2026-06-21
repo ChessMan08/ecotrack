@@ -11,6 +11,9 @@ import Button from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
 import type { Action, FootprintSummary } from "@/types";
 
+/** Maximum time (ms) to wait for data before forcing render */
+const LOAD_TIMEOUT_MS = 15_000;
+
 const FILTER_OPTIONS: { value: string; label: string }[] = [
   { value: "all", label: "All actions" },
   { value: "suggested", label: "Suggested" },
@@ -28,40 +31,65 @@ export default function ActionsPage() {
   const [actions, setActions] = useState<Action[]>([]);
   const [summary, setSummary] = useState<FootprintSummary | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
+  const [dataError, setDataError] = useState<string | null>(null);
   const [filter, setFilter] = useState("all");
   const [generating, setGenerating] = useState(false);
 
   const load = useCallback(async () => {
-    if (!user || !profile) return;
+    if (!user || !profile) {
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
+    setDataError(null);
+
+    // Safety timeout
+    const timeout = setTimeout(() => {
+      setLoading(false);
+      setDataError("Loading took too long. Showing local suggestions.");
+    }, LOAD_TIMEOUT_MS);
+
     try {
+      // Synchronous calculation — always succeeds
       const result = calculateFullFootprint(profile.lifestyle);
       const s = buildFootprintSummary(result);
       setSummary(s);
 
-      const saved = await getActions(user.uid);
-      if (saved.length === 0) {
-        // Generate and seed initial suggestions
+      // Firestore fetch — may fail for new users
+      try {
+        const saved = await getActions(user.uid);
+        if (saved.length === 0) {
+          // Generate and show initial suggestions locally (don't write to Firestore yet)
+          const suggested = generateRecommendations(profile.lifestyle, s, user.uid, 8);
+          const withStatus = suggested.map((a) => ({ ...a, status: "suggested" as const }));
+          setActions(withStatus);
+        } else {
+          setActions(saved as Action[]);
+        }
+      } catch (firestoreErr) {
+        console.error("Failed to fetch actions:", firestoreErr);
+        // Fall back to locally-generated suggestions
         const suggested = generateRecommendations(profile.lifestyle, s, user.uid, 8);
         const withStatus = suggested.map((a) => ({ ...a, status: "suggested" as const }));
         setActions(withStatus);
-      } else {
-        setActions(saved as Action[]);
+        setDataError("Couldn't load saved actions. Showing personalized suggestions.");
       }
-      setError(false);
     } catch (err) {
       console.error("Failed to load actions:", err);
-      setError(true);
+      setDataError("Something went wrong. Please try refreshing.");
     } finally {
+      clearTimeout(timeout);
       setLoading(false);
     }
   }, [user, profile]);
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    load();
+  }, [load]);
 
-  async function regenerateSuggestions() {
+  const regenerateSuggestions = useCallback(async () => {
     if (!user || !profile || !summary) return;
     setGenerating(true);
     try {
@@ -73,21 +101,34 @@ export default function ActionsPage() {
     } finally {
       setGenerating(false);
     }
-  }
+  }, [user, profile, summary, load]);
 
-  const filteredActions = useMemo(() => actions.filter((a) => {
-    if (filter === "all") return a.status !== "dismissed";
-    if (["suggested", "planned", "done"].includes(filter)) return a.status === filter;
-    return a.category === filter && a.status !== "dismissed";
-  }), [actions, filter]);
+  const filteredActions = useMemo(
+    () =>
+      actions.filter((a) => {
+        if (filter === "all") return a.status !== "dismissed";
+        if (["suggested", "planned", "done"].includes(filter)) return a.status === filter;
+        return a.category === filter && a.status !== "dismissed";
+      }),
+    [actions, filter],
+  );
 
   const doneCount = useMemo(() => actions.filter((a) => a.status === "done").length, [actions]);
-  const totalSavings = useMemo(() => actions
-    .filter((a) => a.status === "done")
-    .reduce((sum, a) => sum + a.estimatedKgCO2eSaved, 0), [actions]);
+  const plannedCount = useMemo(() => actions.filter((a) => a.status === "planned").length, [actions]);
+  const totalSavings = useMemo(
+    () => actions.filter((a) => a.status === "done").reduce((sum, a) => sum + a.estimatedKgCO2eSaved, 0),
+    [actions],
+  );
 
   return (
     <div className="page-container animate-fade-in">
+      {/* Error banner */}
+      {dataError && (
+        <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
+          ⚠️ {dataError}
+        </div>
+      )}
+
       {/* Header */}
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
@@ -123,7 +164,7 @@ export default function ActionsPage() {
           </div>
           <div className="col-span-2 sm:col-span-1 rounded-2xl border border-stone-200 bg-white p-4 dark:border-stone-700 dark:bg-stone-900">
             <p className="text-2xl font-bold text-stone-700 dark:text-stone-300">
-              {actions.filter((a) => a.status === "planned").length}
+              {plannedCount}
             </p>
             <p className="text-xs text-stone-500 dark:text-stone-400">Actions planned</p>
           </div>

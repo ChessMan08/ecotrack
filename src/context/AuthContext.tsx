@@ -21,6 +21,7 @@ interface AuthContextValue {
   user: User | null;
   profile: UserProfile | null;
   loading: boolean;
+  error: string | null;
   refreshProfile: () => Promise<void>;
 }
 
@@ -45,19 +46,25 @@ const AuthContext = createContext<AuthContextValue>({
   user: null,
   profile: null,
   loading: true,
+  error: null,
   refreshProfile: async () => {},
 });
+
+/** Maximum time (ms) to wait for auth + profile before forcing render */
+const AUTH_TIMEOUT_MS = 12_000;
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const loadProfile = useCallback(async (u: User) => {
     try {
+      setError(null);
       let data = await getUserProfile(u.uid);
       if (!data) {
-        // First login — create profile
+        // First login — create profile with safe defaults
         const newProfile: Omit<UserProfile, "uid"> = {
           email: u.email ?? "",
           displayName: u.displayName ?? "User",
@@ -73,21 +80,55 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             units: "metric",
           },
         };
-        await createUserProfile(u.uid, newProfile);
+        try {
+          await createUserProfile(u.uid, newProfile);
+        } catch (createErr) {
+          console.error("Failed to create profile:", createErr);
+          // Still use the local profile so the app renders
+        }
         data = newProfile;
       }
       setProfile({ ...data, uid: u.uid } as UserProfile);
     } catch (err) {
       console.error("Failed to load profile:", err);
+      setError("Failed to load your profile. Some features may be limited.");
+      // Set a fallback profile so pages can still render
+      setProfile({
+        uid: u.uid,
+        email: u.email ?? "",
+        displayName: u.displayName ?? "User",
+        photoURL: u.photoURL ?? undefined,
+        createdAt: new Date().toISOString(),
+        onboardingComplete: false,
+        lifestyle: defaultLifestyle,
+        preferences: {
+          theme: "system",
+          defaultPeriod: "yearly",
+          weeklyReminders: false,
+          currency: "USD",
+          units: "metric",
+        },
+      });
     }
   }, []);
 
-  async function refreshProfile() {
+  const refreshProfile = useCallback(async () => {
     if (!user) return;
     await loadProfile(user);
-  }
+  }, [user, loadProfile]);
 
   useEffect(() => {
+    // Safety timeout: if auth hasn't resolved in AUTH_TIMEOUT_MS, stop loading
+    const timeout = setTimeout(() => {
+      setLoading((prev) => {
+        if (prev) {
+          console.warn("Auth timeout — forcing app render");
+          return false;
+        }
+        return prev;
+      });
+    }, AUTH_TIMEOUT_MS);
+
     const unsub = onAuthStateChanged(auth, async (u) => {
       setUser(u);
       if (u) {
@@ -97,11 +138,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       setLoading(false);
     });
-    return unsub;
+
+    return () => {
+      clearTimeout(timeout);
+      unsub();
+    };
   }, [loadProfile]);
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, refreshProfile }}>
+    <AuthContext.Provider value={{ user, profile, loading, error, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );

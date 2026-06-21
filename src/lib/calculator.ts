@@ -411,37 +411,41 @@ export function getEmissionRating(yearlyKg: number): {
   }
 }
 
+// Module-level constants — avoids re-creating objects on every call
+const CATEGORY_LABELS: Record<EmissionCategory, string> = {
+  home_energy: "Home Energy",
+  transportation: "Transportation",
+  food: "Food & Diet",
+  waste: "Waste",
+  purchases: "Purchases",
+};
+
+const CATEGORY_COLORS: Record<EmissionCategory, string> = {
+  home_energy: "#f97316",
+  transportation: "#3b82f6",
+  food: "#22c55e",
+  waste: "#a855f7",
+  purchases: "#ec4899",
+};
+
+const CATEGORY_ICONS: Record<EmissionCategory, string> = {
+  home_energy: "🏠",
+  transportation: "🚗",
+  food: "🥗",
+  waste: "♻️",
+  purchases: "🛍️",
+};
+
 export function getCategoryLabel(category: EmissionCategory): string {
-  const labels: Record<EmissionCategory, string> = {
-    home_energy: "Home Energy",
-    transportation: "Transportation",
-    food: "Food & Diet",
-    waste: "Waste",
-    purchases: "Purchases",
-  };
-  return labels[category];
+  return CATEGORY_LABELS[category];
 }
 
 export function getCategoryColor(category: EmissionCategory): string {
-  const colors: Record<EmissionCategory, string> = {
-    home_energy: "#f97316",
-    transportation: "#3b82f6",
-    food: "#22c55e",
-    waste: "#a855f7",
-    purchases: "#ec4899",
-  };
-  return colors[category];
+  return CATEGORY_COLORS[category];
 }
 
 export function getCategoryIcon(category: EmissionCategory): string {
-  const icons: Record<EmissionCategory, string> = {
-    home_energy: "🏠",
-    transportation: "🚗",
-    food: "🥗",
-    waste: "♻️",
-    purchases: "🛍️",
-  };
-  return icons[category];
+  return CATEGORY_ICONS[category];
 }
 
 // ── Build FootprintSummary from FullFootprintResult ───────────────────────────

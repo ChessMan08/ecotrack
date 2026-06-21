@@ -58,8 +58,8 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
               error
                 ? "border-red-400 focus:ring-red-400"
                 : "border-stone-200 hover:border-stone-300 dark:hover:border-stone-600",
-              icon && "pl-10",
-              suffix && "pr-12",
+              icon ? "pl-10" : "",
+              suffix ? "pr-12" : "",
               className,
             )}
             aria-invalid={!!error}

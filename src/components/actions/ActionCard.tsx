@@ -19,21 +19,37 @@ export default function ActionCard({ action, compact = false, onUpdate }: Action
   const { user } = useAuth();
   const [busy, setBusy] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  async function updateStatus(status: Action["status"]) {
+  async function updateStatus(newStatus: Action["status"]) {
     if (!user) return;
     setBusy(true);
+    setError(null);
     try {
-      if (action.id && !action.id.startsWith("local_")) {
-        await updateAction(user.uid, action.id, {
-          status,
-          completedAt: status === "done" ? new Date().toISOString() : null,
-        });
+      const isLocal = !action.id || action.id.startsWith("local_");
+      if (isLocal) {
+        // Not yet persisted — save to Firestore first
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { id, ...actionData } = action;
+        await addAction(user.uid, { ...actionData, status: newStatus, completedAt: newStatus === "done" ? new Date().toISOString() : undefined });
       } else {
-        // Not yet saved — save it first
-        await addAction(user.uid, { ...action, status, id: undefined });
+        // Already persisted — update in place
+        try {
+          await updateAction(user.uid, action.id, {
+            status: newStatus,
+            completedAt: newStatus === "done" ? new Date().toISOString() : null,
+          });
+        } catch {
+          // Document may have been deleted — re-create it
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          const { id, ...actionData } = action;
+          await addAction(user.uid, { ...actionData, status: newStatus, completedAt: newStatus === "done" ? new Date().toISOString() : undefined });
+        }
       }
       onUpdate?.();
+    } catch (err) {
+      console.error("Failed to update action:", err);
+      setError("Update failed. Please try again.");
     } finally {
       setBusy(false);
     }
@@ -155,6 +171,9 @@ export default function ActionCard({ action, compact = false, onUpdate }: Action
               </button>
             )}
           </div>
+          {error && (
+            <p className="mt-2 text-xs text-red-600 dark:text-red-400">{error}</p>
+          )}
         </div>
       </div>
     </Card>

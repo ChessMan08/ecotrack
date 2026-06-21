@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { buildChatSystemPrompt } from "@/lib/gemini";
+import { callGemini } from "@/lib/gemini-client";
 import type { FootprintSummary, LifestyleProfile, ChatMessage } from "@/types";
 
 export async function POST(req: NextRequest) {
@@ -9,14 +10,6 @@ export async function POST(req: NextRequest) {
       summary: FootprintSummary;
       profile: LifestyleProfile;
     };
-
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json(
-        { text: "AI assistant is unavailable — Gemini API key not configured." },
-        { status: 200 },
-      );
-    }
 
     const systemInstruction = buildChatSystemPrompt(summary, profile);
 
@@ -28,36 +21,25 @@ export async function POST(req: NextRequest) {
         parts: [{ text: m.content }],
       }));
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: systemInstruction }] },
-          contents,
-          generationConfig: {
-            temperature: 0.75,
-            maxOutputTokens: 512,
-            topP: 0.9,
-          },
-        }),
-      },
-    );
+    const aiText = await callGemini({
+      contents,
+      systemInstruction,
+      temperature: 0.75,
+      maxOutputTokens: 512,
+      topP: 0.9,
+    });
 
-    if (!response.ok) {
-      return NextResponse.json(
-        { text: "I'm temporarily unavailable. Please try again in a moment." },
-        { status: 200 },
-      );
+    if (aiText) {
+      return NextResponse.json({ text: aiText });
     }
 
-    const data = await response.json();
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text ?? "I'm not sure how to answer that. Try asking about your carbon footprint!";
-
-    return NextResponse.json({ text });
+    return NextResponse.json({
+      text: "I'm temporarily unavailable. Your footprint data is still accurate — check back in a moment, or explore your dashboard for detailed insights.",
+    });
   } catch (err) {
     console.error("Chat route error:", err);
-    return NextResponse.json({ text: "Something went wrong. Please try again." });
+    return NextResponse.json({
+      text: "Something went wrong. Please try again in a moment.",
+    });
   }
 }

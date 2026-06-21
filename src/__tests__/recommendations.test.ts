@@ -108,7 +108,7 @@ describe("generateRecommendations", () => {
   test("high-electricity profile gets green energy recommendation", () => {
     // Use maxSuggestions=15 to ensure this rule is not cut off by limit
     const recs = generateRecommendations(mockProfile, mockSummary, "uid123", 15);
-    const greenRec = recs.find((r) => r.id.startsWith("switch_green_energy"));
+    const greenRec = recs.find((r) => r.id.includes("switch_green_energy"));
     expect(greenRec).toBeDefined();
   });
 

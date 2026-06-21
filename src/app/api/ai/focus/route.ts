@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { buildWeeklyFocusPrompt } from "@/lib/gemini";
+import { generateLocalFocusTip } from "@/lib/local-insights";
+import { callGemini } from "@/lib/gemini-client";
 import type { FootprintSummary, Goal, Action } from "@/types";
 
 export async function POST(req: NextRequest) {
@@ -10,39 +12,24 @@ export async function POST(req: NextRequest) {
       recentActions: Action[];
     };
 
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json(
-        { text: "Focus on your biggest emission category this week — even small actions add up." },
-        { status: 200 },
-      );
-    }
-
     const prompt = buildWeeklyFocusPrompt(summary, goals, recentActions);
+    const aiText = await callGemini({
+      prompt,
+      temperature: 0.8,
+      maxOutputTokens: 200,
+    });
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.8, maxOutputTokens: 200 },
-        }),
-      },
-    );
-
-    if (!response.ok) {
-      return NextResponse.json(
-        { text: "Focus on reducing your highest-emission category this week." },
-        { status: 200 },
-      );
+    if (aiText) {
+      return NextResponse.json({ text: aiText, fromAI: true });
     }
 
-    const data = await response.json();
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
-    return NextResponse.json({ text });
+    // Fallback to deterministic local tip
+    const localText = generateLocalFocusTip(summary);
+    return NextResponse.json({ text: localText, fromAI: false });
   } catch {
-    return NextResponse.json({ text: "Keep tracking your daily habits — progress adds up!" });
+    return NextResponse.json({
+      text: "Keep tracking your daily habits — progress adds up!",
+      fromAI: false,
+    });
   }
 }

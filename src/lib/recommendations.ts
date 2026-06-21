@@ -25,7 +25,7 @@ export interface RecommendationRule {
 
 // ── Rule library ──────────────────────────────────────────────────────────────
 
-const RECOMMENDATION_RULES: RecommendationRule[] = [
+const RECOMMENDATION_RULES: readonly RecommendationRule[] = [
   // ── Transportation ──────────────────────────────────────────────────────
   {
     id: "switch_to_ev",
@@ -286,7 +286,7 @@ export function generateRecommendations(
   });
 
   return sorted.slice(0, maxSuggestions).map((rule) => ({
-    id: `${rule.id}_${nanoid(6)}`,   // Preserve rule id as prefix for deduplication + testing
+    id: `local_${rule.id}_${nanoid(6)}`,
     uid,
     category: rule.category,
     title: rule.title,

@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import AppNav from "@/components/layout/AppNav";
+import AIChatWidget from "@/components/ai/AIChatWidget";
 
 /**
  * Shared layout for all authenticated pages.
@@ -38,6 +39,7 @@ export default function AuthenticatedLayout({ children }: { children: React.Reac
       <main className="flex-1 pb-20 lg:pb-0" id="main-content">
         {children}
       </main>
+      <AIChatWidget />
     </div>
   );
 }

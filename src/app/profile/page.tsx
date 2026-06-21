@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { updateUserProfile } from "@/lib/firebase";
 import { calculateFullFootprint, buildFootprintSummary, formatKgCO2e } from "@/lib/calculator";
@@ -271,8 +271,10 @@ function AIChatPanel({ profile }: { profile: LifestyleProfile }) {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const footprintResult = calculateFullFootprint(profile);
-  const summary = buildFootprintSummary(footprintResult);
+  const summary = useMemo(() => {
+    const result = calculateFullFootprint(profile);
+    return buildFootprintSummary(result);
+  }, [profile]);
 
   async function sendMessage() {
     const text = input.trim();
